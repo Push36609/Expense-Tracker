@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Expense Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+</head>
+<body class="bg-slate-950">
+    <div class="relative min-h-screen overflow-hidden">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,70,229,.25),_transparent_60%)]"></div>
+        <div class="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-4 py-10">
+            <header class="rounded-3xl bg-gradient-to-br from-brand via-brand-dark to-slate-900 p-8 text-white shadow-2xl shadow-brand/40">
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-sm uppercase tracking-[0.3em] text-white/70">Finance cockpit</p>
+                        <h1 class="mt-1 text-4xl font-semibold tracking-tight">Daily Expense Tracker</h1>
+                        <p class="mt-2 max-w-xl text-base text-white/80">
+                            Monitor spend, understand category trends, and forecast your next week with a modern, responsive dashboard.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-8 py-5 backdrop-blur">
+                        <div>
+                            <p class="text-xs uppercase tracking-widest text-white/70">Total spent</p>
+                            <p class="text-4xl font-semibold">₹{{ "{:,.2f}".format(total) }}</p>
+                        </div>
+                        <a href="/forecast" class="group inline-flex items-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand transition hover:-translate-y-0.5 hover:bg-slate-100">
+                            Forecast view
+                            <span class="ml-1 text-lg transition group-hover:translate-x-0.5">↗</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Average per expense</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(stats.average) }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Entries tracked</p>
+                        <p class="mt-2 text-3xl font-semibold">{{ stats.count }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Daily pace</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(stats.daily_projection) }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Weekly projection</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(stats.weekly_projection) }}</p>
+                    </div>
+                </div>
+            </header>
+
+            <section class="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+                <div class="rounded-3xl bg-white p-6 shadow-2xl shadow-slate-900/10">
+                    <div class="flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-brand uppercase tracking-widest">New transaction</p>
+                            <h2 class="text-2xl font-semibold text-slate-900">Log an expense</h2>
+                            <p class="text-sm text-slate-500">Use the form to add purchases instantly. Details help our model stay accurate.</p>
+                        </div>
+                        <button id="toggleForm" class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand">
+                            Collapse form
+                        </button>
+                    </div>
+                    <form id="expenseForm" action="/add" method="POST" class="mt-6 grid gap-6 md:grid-cols-2">
+                        <label class="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                            Date
+                            <input type="date" name="date" required class="rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-brand focus:ring focus:ring-brand/20">
+                        </label>
+                        <label class="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                            Amount
+                            <input type="number" name="amount" step="0.01" required class="rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-brand focus:ring focus:ring-brand/20" placeholder="0.00">
+                        </label>
+                        <label class="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                            Merchant
+                            <input type="text" name="merchant" required class="rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-brand focus:ring focus:ring-brand/20" placeholder="Store or vendor name">
+                        </label>
+                        <label class="flex flex-col gap-2 text-sm font-medium text-slate-700 md:col-span-2">
+                            Description
+                            <input type="text" name="description" required class="rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-brand focus:ring focus:ring-brand/20" placeholder="What was this purchase for?">
+                        </label>
+                        <div class="md:col-span-2">
+                            <button type="submit" class="w-full rounded-2xl bg-gradient-to-r from-brand to-brand-dark px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand/40 transition hover:-translate-y-0.5">
+                                Add expense
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    <div class="rounded-3xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur">
+                        <p class="text-sm uppercase tracking-[0.35em] text-white/60">Largest swipe</p>
+                        {% if stats.largest %}
+                        <p class="mt-4 text-4xl font-semibold">₹{{ "{:,.2f}".format(stats.largest.amount) }}</p>
+                        <p class="text-sm text-white/70">{{ stats.largest.merchant }} • {{ stats.largest.description }}</p>
+                        <p class="mt-1 text-xs uppercase tracking-wide text-white/50">{{ stats.largest.date }}</p>
+                        {% else %}
+                        <p class="mt-4 text-white/70">No transactions logged yet.</p>
+                        {% endif %}
+                    </div>
+                    <div class="rounded-3xl bg-white p-6 shadow-2xl shadow-slate-900/10">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-slate-900">Recent activity</h3>
+                                <p class="text-sm text-slate-500">Latest 5 transactions</p>
+                            </div>
+                            <div class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                Live feed
+                            </div>
+                        </div>
+                        {% if recent_expenses %}
+                        <ul class="mt-4 space-y-4">
+                            {% for exp in recent_expenses %}
+                            <li class="flex items-center justify-between rounded-2xl border border-slate-100 px-4 py-3">
+                                <div>
+                                    <p class="font-semibold text-slate-900">{{ exp.Merchant }}</p>
+                                    <p class="text-sm text-slate-500">{{ exp.Description }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-lg font-semibold text-brand">₹{{ "{:,.2f}".format(exp.Amount) }}</p>
+                                    <p class="text-xs text-slate-400">{{ exp.Date }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                            <p class="mt-4 text-sm text-slate-500">Add your first expense to unlock insights.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid gap-6 lg:grid-cols-3">
+                <div class="rounded-3xl bg-white p-6 shadow-2xl shadow-slate-900/10 lg:col-span-2">
+                    <div class="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-xl font-semibold text-slate-900">Category pulse</h2>
+                            <p class="text-sm text-slate-500">Distribution of every dollar spent.</p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full bg-slate-100 px-4 py-1 text-xs font-semibold text-slate-600">{{ category_totals|length }} categories</span>
+                    </div>
+                    {% if category_totals %}
+                    <div class="mt-5 space-y-4">
+                        {% for cat in category_totals %}
+                        <div>
+                            <div class="flex items-center justify-between text-sm font-medium text-slate-600">
+                                <p>{{ cat.label }}</p>
+                                <p>₹{{ "{:,.2f}".format(cat.amount) }} • {{ cat.percent }}%</p>
+                            </div>
+                            <div class="mt-2 h-3 rounded-full bg-slate-100">
+                                <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-all" style="width: {{ cat.percent }}%;"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="mt-4 text-sm text-slate-500">No categorized spending yet.</p>
+                    {% endif %}
+                </div>
+                <div class="rounded-3xl bg-slate-900 p-6 text-white shadow-2xl shadow-slate-900/10">
+                    <div>
+                        <h2 class="text-xl font-semibold">Daily momentum</h2>
+                        <p class="text-sm text-white/70">Compare each day's total to the strongest day.</p>
+                    </div>
+                    {% if daily_totals %}
+                    <div class="mt-6 flex items-end gap-2">
+                        {% set max_amount = daily_max if daily_max else 1 %}
+                        {% for day in daily_totals %}
+                        {% set percent = (day.Amount / (max_amount if max_amount else 1)) * 100 %}
+                        <div class="group flex flex-col items-center gap-2 text-xs text-white/60">
+                            <div class="flex h-32 w-6 items-end justify-center rounded-full bg-white/10">
+                                <div class="w-2 rounded-full bg-white/70 transition group-hover:bg-white" style="height: {{ '%.0f' % percent }}%;"></div>
+                            </div>
+                            <span>{{ day.Date.split('-')[-1] }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="mt-6 text-sm text-white/70">We need a few days of spend data to display the trend.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="rounded-3xl bg-white p-6 shadow-2xl shadow-slate-900/10">
+                <div class="flex flex-col gap-4 border-b border-slate-100 pb-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-sm font-medium uppercase tracking-[0.3em] text-brand">Ledger</p>
+                        <h2 class="text-2xl font-semibold text-slate-900">Expense history</h2>
+                        <p class="text-sm text-slate-500">{{ expenses|length }} records</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <input id="searchInput" type="search" placeholder="Search description or merchant..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-brand focus:ring focus:ring-brand/20 md:w-64">
+                        <select id="categoryFilter" class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-brand focus:ring focus:ring-brand/20 md:w-48">
+                            <option value="">All categories</option>
+                            {% for option in categories %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        <button id="sortAmount" class="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand">
+                            Sort by amount
+                        </button>
+                        <button id="resetFilters" class="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                {% if expenses %}
+                <div class="mt-6 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100 text-sm text-slate-700">
+                        <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3 text-left">Date</th>
+                                <th class="px-6 py-3 text-left">Amount</th>
+                                <th class="px-6 py-3 text-left">Merchant</th>
+                                <th class="px-6 py-3 text-left">Description</th>
+                                <th class="px-6 py-3 text-left">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTable" class="divide-y divide-slate-100 bg-white">
+                            {% for exp in expenses %}
+                            <tr data-expense-row data-category="{{ exp.Category }}" data-amount="{{ exp.Amount }}" class="transition hover:bg-slate-50">
+                                <td class="px-6 py-4 font-medium">{{ exp.Date }}</td>
+                                <td class="px-6 py-4 text-brand font-semibold">₹{{ "{:,.2f}".format(exp.Amount) }}</td>
+                                <td class="px-6 py-4">{{ exp.Merchant }}</td>
+                                <td class="px-6 py-4 text-slate-500">{{ exp.Description }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                                        {{ exp.Category }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="px-6 py-8 text-center text-slate-500">No expenses recorded yet. Use the form above to add your first entry.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('expenseForm');
+        const toggleFormBtn = document.getElementById('toggleForm');
+        if (form && toggleFormBtn) {
+            toggleFormBtn.addEventListener('click', () => {
+                form.classList.toggle('hidden');
+                toggleFormBtn.textContent = form.classList.contains('hidden') ? 'Expand form' : 'Collapse form';
+            });
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const sortButton = document.getElementById('sortAmount');
+        const resetButton = document.getElementById('resetFilters');
+        const tableBody = document.getElementById('expenseTable');
+        let sortAscending = false;
+
+        function applyFilters() {
+            if (!tableBody) return;
+            const rows = Array.from(tableBody.querySelectorAll('[data-expense-row]'));
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
+            const category = categoryFilter ? categoryFilter.value : '';
+
+            rows.forEach((row) => {
+                const text = row.textContent.toLowerCase();
+                const matchesQuery = text.includes(query);
+                const matchesCategory = !category || row.dataset.category === category;
+                row.style.display = matchesQuery && matchesCategory ? '' : 'none';
+            });
+        }
+
+        function sortRows() {
+            if (!tableBody) return;
+            const rows = Array.from(tableBody.querySelectorAll('[data-expense-row]'));
+            rows.sort((a, b) => {
+                const amountA = parseFloat(a.dataset.amount || '0');
+                const amountB = parseFloat(b.dataset.amount || '0');
+                return sortAscending ? amountA - amountB : amountB - amountA;
+            });
+            rows.forEach((row) => tableBody.appendChild(row));
+            sortAscending = !sortAscending;
+            if (sortButton) {
+                sortButton.textContent = sortAscending ? 'Sort by amount ↓' : 'Sort by amount ↑';
+            }
+        }
+
+        function resetFilters() {
+            if (searchInput) searchInput.value = '';
+            if (categoryFilter) categoryFilter.value = '';
+            sortAscending = false;
+            if (sortButton) sortButton.textContent = 'Sort by amount';
+            applyFilters();
+        }
+
+        searchInput?.addEventListener('input', applyFilters);
+        categoryFilter?.addEventListener('change', applyFilters);
+        sortButton?.addEventListener('click', sortRows);
+        resetButton?.addEventListener('click', resetFilters);
+    </script>
+</body>
+</html>

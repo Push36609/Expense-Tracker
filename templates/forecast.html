@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Forecast</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+</head>
+<body class="bg-slate-950">
+    <div class="relative min-h-screen overflow-hidden">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,.1),_transparent_55%)]"></div>
+        <div class="relative z-10 mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10">
+            <header class="rounded-3xl bg-gradient-to-r from-brand-dark via-brand to-slate-900 p-8 text-white shadow-2xl">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-sm uppercase tracking-[0.35em] text-white/70">Prophet insights</p>
+                        <h1 class="text-4xl font-semibold">7-Day Spend Projection</h1>
+                        <p class="mt-2 text-white/75">Planning ahead? These numbers help you anticipate cash needs before they hit.</p>
+                    </div>
+                    <a href="/" class="inline-flex items-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-brand shadow-lg shadow-black/10 transition hover:-translate-y-0.5">
+                        ← Back to tracker
+                    </a>
+                </div>
+                {% if forecast_summary %}
+                <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Average/day</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(forecast_summary.average) }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Highest day</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(forecast_summary.max) }}</p>
+                        <p class="text-xs text-white/60">Expected {{ forecast_summary.peak_day }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Lowest day</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(forecast_summary.min) }}</p>
+                        <p class="text-xs text-white/60">Expected {{ forecast_summary.low_day }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/10 p-4">
+                        <p class="text-xs uppercase tracking-widest text-white/70">Total week</p>
+                        <p class="mt-2 text-3xl font-semibold">₹{{ "{:,.2f}".format(forecast_summary.average * 7) }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </header>
+
+            <section class="rounded-3xl bg-white p-6 shadow-2xl shadow-slate-900/20">
+                <div class="flex flex-col gap-4 border-b border-slate-100 pb-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-slate-900">Projected daily totals</h2>
+                        <p class="text-sm text-slate-500">Each bar represents the expected spend for that day.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="tableToggle" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand">Table</button>
+                        <button id="chartToggle" class="rounded-2xl border border-transparent bg-brand/10 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/20">Bars</button>
+                    </div>
+                </div>
+
+                {% if forecast %}
+                <div id="forecastBars" class="mt-6 grid gap-4 md:grid-cols-2">
+                    {% set max_future = forecast | max(attribute='yhat') %}
+                    {% for day in forecast %}
+                    {% set percent = (day.yhat / (max_future if max_future else 1)) * 100 %}
+                    <div class="rounded-2xl border border-slate-100 p-4">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-slate-900">{{ day.ds }}</p>
+                            <p class="text-lg font-semibold text-brand">₹{{ "{:,.2f}".format(day.yhat) }}</p>
+                        </div>
+                        <div class="mt-3 h-3 rounded-full bg-slate-100">
+                            <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-all" style="width: {{ '%.0f' % percent }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="forecastTable" class="mt-6 hidden overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100 text-sm text-slate-700">
+                        <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3 text-left">Date</th>
+                                <th class="px-6 py-3 text-left">Expected spend</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            {% for day in forecast %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-6 py-4 font-medium">{{ day.ds }}</td>
+                                <td class="px-6 py-4 text-lg font-semibold text-brand">₹{{ "{:,.2f}".format(day.yhat) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="px-6 py-8 text-center text-slate-500">We need more historical data before we can generate a reliable forecast.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const tableToggle = document.getElementById('tableToggle');
+        const chartToggle = document.getElementById('chartToggle');
+        const bars = document.getElementById('forecastBars');
+        const table = document.getElementById('forecastTable');
+
+        if (tableToggle && chartToggle && bars && table) {
+            tableToggle.addEventListener('click', () => {
+                table.classList.remove('hidden');
+                bars.classList.add('hidden');
+                tableToggle.classList.add('bg-brand/10', 'border-transparent', 'text-brand');
+                chartToggle.classList.remove('bg-brand/10', 'border-transparent', 'text-brand');
+                chartToggle.classList.add('border-slate-200', 'text-slate-700');
+            });
+
+            chartToggle.addEventListener('click', () => {
+                bars.classList.remove('hidden');
+                table.classList.add('hidden');
+                chartToggle.classList.add('bg-brand/10', 'border-transparent', 'text-brand');
+                tableToggle.classList.remove('bg-brand/10', 'border-transparent', 'text-brand');
+                tableToggle.classList.add('border-slate-200', 'text-slate-700');
+            });
+        }
+    </script>
+</body>
+</html>
